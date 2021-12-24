@@ -1,0 +1,402 @@
+openapi: 3.0.1
+info:
+  title: API for user related data
+  version: 1.0.0
+servers:
+  - url: /api/v1/user
+paths:
+  '/':
+    get:
+      tags:
+        - User
+      operationId: searchUsers
+      summary: Users searching
+      description: It returns a page of UserDTO which matches the query parameters
+      parameters:
+        - in: query
+          name: name
+          schema:
+            type: string
+          required: false
+          description: User's name
+        - in: query
+          name: cpf
+          schema:
+            type: string
+          required: false
+          description: User's CPF
+          example: 99988877766655
+          allowEmptyValue: false
+        - name: page
+          in: query
+          schema:
+            type: integer
+            format: int32
+            default: 0
+          required: false
+          description: Current page
+        - name: size
+          in: query
+          schema:
+            type: integer
+            format: int32
+            default: 10
+          required: false
+          description: Items count per page
+        - name: sort
+          in: query
+          schema:
+            type: string
+            default: "name"
+          required: false
+          description: Sorting field in which you can use all the UserDTO's properties
+        - name: direction
+          in: query
+          schema:
+            $ref: '#/components/schemas/Direction'
+          required: false
+          description: Sort direction ASC | DESC
+      responses:
+        '200':
+          $ref: '#/components/responses/SearchUserOkResponse'
+        '400':
+          $ref: '#/components/responses/UserBadRequestResponse'
+        '404':
+          $ref: '#/components/responses/UserNotFoundResponse'
+    post:
+      tags:
+        - User
+      operationId: createUser
+      summary: User creation
+      description: It creates a new user registry
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreationDTO'
+      responses:
+        '201':
+          $ref: '#/components/responses/UserOkResponse'
+        '400':
+          $ref: '#/components/responses/UserBadRequestResponse'
+        '409':
+          $ref: '#/components/responses/UserConflictResponse'
+  '/{userId}':
+    get:
+      tags:
+        - User
+      operationId: retrieveUser
+      summary: User retrieving
+      description: It returns a UserDTO according to its UUID
+      parameters:
+        - in: path
+          name: userId
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: User's UUID
+      responses:
+        '200':
+          $ref: '#/components/responses/UserOkResponse'
+        '400':
+          $ref: '#/components/responses/UserBadRequestResponse'
+        '404':
+          $ref: '#/components/responses/UserNotFoundResponse'
+    patch:
+      tags:
+        - User
+      operationId: partiallyUpdateUser
+      summary: User partial updating
+      description: It partially updates an existing user according to its UUID (it disregards the nulls)
+      parameters:
+        - in: path
+          name: userId
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: User's UUID
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserPartialUpdateDTO'
+      responses:
+        '200':
+          $ref: '#/components/responses/UserOkResponse'
+        '400':
+          $ref: '#/components/responses/UserBadRequestResponse'
+        '404':
+          $ref: '#/components/responses/UserNotFoundResponse'
+    put:
+      tags:
+        - User
+      operationId: updateUser
+      summary: User updating
+      description: It updates an existing user according to its UUID
+      parameters:
+        - in: path
+          name: userId
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: User's UUID
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdateDTO'
+      responses:
+        '200':
+          $ref: '#/components/responses/UserOkResponse'
+        '400':
+          $ref: '#/components/responses/UserBadRequestResponse'
+        '404':
+          $ref: '#/components/responses/UserNotFoundResponse'
+    delete:
+      tags:
+        - User
+      operationId: deleteUser
+      summary: User deletion
+      description: It does a logic deletion of the user according to its UUID
+      parameters:
+        - in: path
+          name: userId
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: User's UUID
+      responses:
+        '200':
+          $ref: '#/components/responses/UserOkResponse'
+        '400':
+          $ref: '#/components/responses/UserBadRequestResponse'
+        '404':
+          $ref: '#/components/responses/UserNotFoundResponse'
+  '/cpf/{userCpf}':
+    get:
+      tags:
+        - User
+      operationId: retrieveUserByCpf
+      summary: User retrieving by CPF
+      description: It returns a UserDTO according to its CPF
+      parameters:
+        - in: path
+          name: userCpf
+          schema:
+            type: string
+          required: true
+          description: User's CPF
+      responses:
+        '200':
+          $ref: '#/components/responses/UserOkResponse'
+        '400':
+          $ref: '#/components/responses/UserBadRequestResponse'
+        '404':
+          $ref: '#/components/responses/UserNotFoundResponse'
+components:
+  responses:
+    SearchUserOkResponse:
+      description: Processed request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PageUserDTO'
+    UserOkResponse:
+      description: Processed request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/UserDTO'
+    UserNotFoundResponse:
+      description: User not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    UserBadRequestResponse:
+      description: An error occured while processing the request body
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    UserConflictResponse:
+      description: A data conflict occurred (it could be a ConstraintViolationException)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+  schemas:
+    PageUserDTO:
+      title: Page«User»
+      type: object
+      description: A page of UserDTO
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserDTO'
+        total:
+          type: integer
+          format: int64
+        currentPage:
+          type: integer
+          format: int32
+        pageCount:
+          type: integer
+          format: int32
+        pageSize:
+          type: integer
+          format: int32
+        pageable:
+          $ref: '#/components/schemas/Pageable'
+    UserDTO:
+      type: object
+      description: The app user
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "7435806f-4022-41d0-9c62-c9fc74d97d16"
+        cpf:
+          type: string
+          example: "99988877766"
+        name:
+          type: string
+          example: "Mary"
+        birthDate:
+          type: string
+          format: date
+          example: "2001-01-01"
+        phone:
+          type: string
+          example: "+5544999887766"
+        email:
+          type: string
+          example: "example@email.com"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2001-01-01T00:00:00.000Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2001-01-01T00:00:00.000Z"
+      required:
+        - cpf
+        - name
+        - birthDate
+        - createdAt
+    UserCreationDTO:
+      type: object
+      description: The app user
+      properties:
+        cpf:
+          type: string
+          example: "99988877766"
+        name:
+          type: string
+          example: "Mary"
+        birthDate:
+          type: string
+          format: date
+          example: "2001-01-01"
+        phone:
+          type: string
+          example: "+5544999887766"
+        email:
+          type: string
+          example: "example@email.com"
+      required:
+        - cpf
+        - name
+        - birthDate
+    UserPartialUpdateDTO:
+      type: object
+      description: The app user
+      properties:
+        name:
+          type: string
+          example: "Mary"
+        birthDate:
+          type: string
+          format: date
+          example: "2001-01-01"
+        phone:
+          type: string
+          example: "+5544999887766"
+        email:
+          type: string
+          example: "example@email.com"
+    UserUpdateDTO:
+      type: object
+      description: The app user
+      properties:
+        name:
+          type: string
+          example: "Mary"
+        birthDate:
+          type: string
+          format: date
+          example: "2001-01-01"
+        phone:
+          type: string
+          example: "+5544999887766"
+        email:
+          type: string
+          example: "example@email.com"
+      required:
+        - name
+        - birthDate
+    Sort:
+      type: object
+      properties:
+        empty:
+          type: boolean
+        sorted:
+          type: boolean
+        unsorted:
+          type: boolean
+      title: Sort
+    Direction:
+      type: string
+      default: "ASC"
+      enum:
+        - ASC
+        - DESC
+    Pageable:
+      type: object
+      properties:
+        offset:
+          type: integer
+          format: int64
+        pageNumber:
+          type: integer
+          format: int64
+        pageSize:
+          type: integer
+          format: int32
+        paged:
+          type: boolean
+        unpaged:
+          type: boolean
+      title: Pageable
+    ApiError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ApiErrorType'
+        message:
+          type: string
+          description: Error message
+    ApiErrorType:
+      type: string
+      enum:
+        - DUPLICATED_CPF
+        - INVALID_CPF
+        - INVALID_PAYLOAD
+        - USER_NOT_FOUND
+        - UNEXPECTED_ERROR

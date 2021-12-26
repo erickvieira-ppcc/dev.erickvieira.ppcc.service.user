@@ -17,21 +17,21 @@ class ApplicationExceptionHandler {
     @ExceptionHandler(BadRequestException::class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ResponseBody
-    fun exception(ex: BadRequestException): ApiError = ApiError().type(ex.type).message(ex.message)
+    fun exception(ex: BadRequestException) = ApiError(type = ex.type, message = ex.message)
 
     @ExceptionHandler(NotFoundException::class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
     @ResponseBody
-    fun exception(ex: NotFoundException): ApiError = ApiError().type(ex.type).message(ex.message)
+    fun exception(ex: NotFoundException) = ApiError(type = ex.type, message = ex.message)
 
     @ExceptionHandler(ConflictException::class)
     @ResponseStatus(HttpStatus.CONFLICT)
     @ResponseBody
-    fun exception(ex: ConflictException): ApiError = ApiError().type(ex.type).message(ex.message)
+    fun exception(ex: ConflictException) = ApiError(type = ex.type, message = ex.message)
 
     @ExceptionHandler(UnexpectedException::class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     @ResponseBody
-    fun exception(ex: UnexpectedException): ApiError = ApiError().type(ex.type).message(ex.message)
+    fun exception(ex: UnexpectedException) = ApiError(type = ex.type, message = ex.message)
 
 }

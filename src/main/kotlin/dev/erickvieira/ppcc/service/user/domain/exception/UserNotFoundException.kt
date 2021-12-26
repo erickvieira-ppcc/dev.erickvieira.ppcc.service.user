@@ -4,6 +4,6 @@ import dev.erickvieira.ppcc.service.user.web.api.model.ApiErrorType
 
 class UserNotFoundException(vararg search: Pair<String, Any?>) : NotFoundException(
     message = "No users found using the search terms provided",
-    type = ApiErrorType.USER_NOT_FOUND,
+    type = ApiErrorType.userNotFound,
     search = search
 )

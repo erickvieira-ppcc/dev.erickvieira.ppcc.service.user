@@ -1,6 +1,8 @@
-package dev.erickvieira.ppcc.service.user.extension
+package dev.erickvieira.ppcc.service.user.unit.extension
 
+import dev.erickvieira.ppcc.service.user.extension.PageRequest
 import dev.erickvieira.ppcc.service.user.web.api.model.Direction
+import dev.erickvieira.ppcc.service.user.web.api.model.UserFields
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -11,13 +13,16 @@ class PageRequestExtensionsTests {
         mapOf(
             "page" to 1,
             "size" to 20,
-            "sort" to "name",
-            "direction" to Direction.ASC
+            "sort" to UserFields.fullName,
+            "direction" to Direction.asc
         ).let { parameters ->
             PageRequest(parameters).let { pageable ->
                 assertEquals(parameters["page"], pageable.pageNumber)
                 assertEquals(parameters["size"], pageable.pageSize)
-                assertEquals("${parameters["sort"]}: ${parameters["direction"]}", pageable.sort.toString())
+                assertEquals(
+                    "${parameters["sort"]}: ${(parameters["direction"] as Direction).value.uppercase()}",
+                    pageable.sort.toString()
+                )
             }
         }
     }
@@ -28,7 +33,7 @@ class PageRequestExtensionsTests {
             PageRequest(parameters).let { pageable ->
                 assertEquals(0, pageable.pageNumber)
                 assertEquals(20, pageable.pageSize)
-                assertEquals("name: ASC", pageable.sort.toString())
+                assertEquals("fullName: ASC", pageable.sort.toString())
             }
         }
     }

@@ -1,24 +1,27 @@
 openapi: 3.0.1
 info:
-  title: API for user related data
+  title: User API
+  description: The app user API
   version: 1.0.0
+tags:
+  - name: User
+    description: User API
 servers:
   - url: /api/v1/user
 paths:
   '/':
     get:
-      tags:
-        - User
+      tags: [User]
       operationId: searchUsers
       summary: Users searching
       description: It returns a page of UserDTO which matches the query parameters
       parameters:
         - in: query
-          name: name
+          name: fullName
           schema:
             type: string
           required: false
-          description: User's name
+          description: User's full name
         - in: query
           name: cpf
           schema:
@@ -46,8 +49,7 @@ paths:
         - name: sort
           in: query
           schema:
-            type: string
-            default: "name"
+            $ref: '#/components/schemas/UserFields'
           required: false
           description: Sorting field in which you can use all the UserDTO's properties
         - name: direction
@@ -64,8 +66,7 @@ paths:
         '404':
           $ref: '#/components/responses/UserNotFoundResponse'
     post:
-      tags:
-        - User
+      tags: [User]
       operationId: createUser
       summary: User creation
       description: It creates a new user registry
@@ -83,8 +84,7 @@ paths:
           $ref: '#/components/responses/UserConflictResponse'
   '/{userId}':
     get:
-      tags:
-        - User
+      tags: [User]
       operationId: retrieveUser
       summary: User retrieving
       description: It returns a UserDTO according to its UUID
@@ -104,8 +104,7 @@ paths:
         '404':
           $ref: '#/components/responses/UserNotFoundResponse'
     patch:
-      tags:
-        - User
+      tags: [User]
       operationId: partiallyUpdateUser
       summary: User partial updating
       description: It partially updates an existing user according to its UUID (it disregards the nulls)
@@ -130,8 +129,7 @@ paths:
         '404':
           $ref: '#/components/responses/UserNotFoundResponse'
     put:
-      tags:
-        - User
+      tags: [User]
       operationId: updateUser
       summary: User updating
       description: It updates an existing user according to its UUID
@@ -156,8 +154,7 @@ paths:
         '404':
           $ref: '#/components/responses/UserNotFoundResponse'
     delete:
-      tags:
-        - User
+      tags: [User]
       operationId: deleteUser
       summary: User deletion
       description: It does a logic deletion of the user according to its UUID
@@ -178,8 +175,7 @@ paths:
           $ref: '#/components/responses/UserNotFoundResponse'
   '/cpf/{userCpf}':
     get:
-      tags:
-        - User
+      tags: [User]
       operationId: retrieveUserByCpf
       summary: User retrieving by CPF
       description: It returns a UserDTO according to its CPF
@@ -224,7 +220,7 @@ components:
           schema:
             $ref: '#/components/schemas/ApiError'
     UserConflictResponse:
-      description: A data conflict occurred (it could be a ConstraintViolationException)
+      description: A data conflict occurred (it might be a ConstraintViolationException)
       content:
         application/json:
           schema:
@@ -242,17 +238,19 @@ components:
         total:
           type: integer
           format: int64
-        currentPage:
-          type: integer
-          format: int32
         pageCount:
           type: integer
           format: int32
-        pageSize:
-          type: integer
-          format: int32
+        sortedBy:
+          type: string
         pageable:
           $ref: '#/components/schemas/Pageable'
+      required:
+        - content
+        - total
+        - pageCount
+        - sortedBy
+        - pageable
     UserDTO:
       type: object
       description: The app user
@@ -263,9 +261,13 @@ components:
           example: "7435806f-4022-41d0-9c62-c9fc74d97d16"
         cpf:
           type: string
+          minLength: 11
+          maxLength: 11
           example: "99988877766"
-        name:
+        fullName:
           type: string
+          minLength: 2
+          maxLength: 256
           example: "Mary"
         birthDate:
           type: string
@@ -273,9 +275,13 @@ components:
           example: "2001-01-01"
         phone:
           type: string
+          minLength: 8
+          maxLength: 16
           example: "+5544999887766"
         email:
           type: string
+          minLength: 8
+          maxLength: 64
           example: "example@email.com"
         createdAt:
           type: string
@@ -286,8 +292,9 @@ components:
           format: date-time
           example: "2001-01-01T00:00:00.000Z"
       required:
+        - id
         - cpf
-        - name
+        - fullName
         - birthDate
         - createdAt
     UserCreationDTO:
@@ -296,9 +303,13 @@ components:
       properties:
         cpf:
           type: string
+          minLength: 11
+          maxLength: 11
           example: "99988877766"
-        name:
+        fullName:
           type: string
+          minLength: 2
+          maxLength: 256
           example: "Mary"
         birthDate:
           type: string
@@ -306,51 +317,79 @@ components:
           example: "2001-01-01"
         phone:
           type: string
+          minLength: 8
+          maxLength: 16
           example: "+5544999887766"
         email:
           type: string
+          minLength: 8
+          maxLength: 64
           example: "example@email.com"
       required:
         - cpf
-        - name
+        - fullName
         - birthDate
     UserPartialUpdateDTO:
       type: object
       description: The app user
       properties:
-        name:
+        fullName:
           type: string
+          minLength: 2
+          maxLength: 256
           example: "Mary"
         birthDate:
           type: string
           format: date
           example: "2001-01-01"
         phone:
+          minLength: 8
+          maxLength: 16
           type: string
           example: "+5544999887766"
         email:
           type: string
+          minLength: 8
+          maxLength: 64
           example: "example@email.com"
     UserUpdateDTO:
       type: object
       description: The app user
       properties:
-        name:
+        fullName:
           type: string
+          minLength: 2
+          maxLength: 256
           example: "Mary"
         birthDate:
           type: string
           format: date
           example: "2001-01-01"
         phone:
+          minLength: 8
+          maxLength: 16
           type: string
           example: "+5544999887766"
         email:
           type: string
+          minLength: 8
+          maxLength: 64
           example: "example@email.com"
       required:
-        - name
+        - fullName
         - birthDate
+    UserFields:
+      type: string
+      default: fullName
+      enum:
+        - id
+        - cpf
+        - fullName
+        - birthDate
+        - phone
+        - email
+        - createdAt
+        - updatedAt
     Sort:
       type: object
       properties:
@@ -363,10 +402,10 @@ components:
       title: Sort
     Direction:
       type: string
-      default: "ASC"
+      default: "asc"
       enum:
-        - ASC
-        - DESC
+        - asc
+        - desc
     Pageable:
       type: object
       properties:
@@ -395,8 +434,8 @@ components:
     ApiErrorType:
       type: string
       enum:
-        - DUPLICATED_CPF
-        - INVALID_CPF
-        - INVALID_PAYLOAD
-        - USER_NOT_FOUND
-        - UNEXPECTED_ERROR
+        - duplicated_cpf
+        - invalid_cpf
+        - user_not_found
+        - null_payload
+        - unexpected_error

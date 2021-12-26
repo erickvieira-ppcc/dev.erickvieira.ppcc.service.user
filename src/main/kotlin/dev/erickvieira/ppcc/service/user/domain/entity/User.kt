@@ -21,8 +21,8 @@ data class User(
     @Column(name = "cpf", nullable = false)
     val cpf: String = String(),
 
-    @Column(name = "name", nullable = false)
-    val name: String = String(),
+    @Column(name = "full_name", nullable = false)
+    val fullName: String = String(),
 
     @Column(name = "birth_date", nullable = false)
     val birthDate: LocalDate? = null,
@@ -54,4 +54,6 @@ data class User(
 
     @Override
     override fun toString(): String = Gson().toJson(this)
+
+    companion object {}
 }

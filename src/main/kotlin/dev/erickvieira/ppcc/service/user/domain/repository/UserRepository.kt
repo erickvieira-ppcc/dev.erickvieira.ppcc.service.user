@@ -37,31 +37,31 @@ interface UserRepository : JpaRepository<User, UUID> {
     fun findAllByCpfAndDeletedAtIsNull(cpf: String, pageable: Pageable): Page<User>
 
     @Query(
-        value = "FROM User u WHERE (LOWER(u.name) LIKE ('%' || LOWER(?1) || '%')) AND u.deletedAt IS NULL",
+        value = "FROM User u WHERE (LOWER(u.fullName) LIKE ('%' || LOWER(?1) || '%')) AND u.deletedAt IS NULL",
         countQuery = """
             SELECT      COUNT(u.id) 
             FROM        User u 
-            WHERE       (LOWER(u.name) LIKE ('%' || LOWER(?1) || '%')) 
+            WHERE       (LOWER(u.fullName) LIKE ('%' || LOWER(?1) || '%')) 
                         AND u.deletedAt IS NULL
         """
     )
-    fun findAllByNameAndDeletedAtIsNull(name: String, pageable: Pageable): Page<User>
+    fun findAllByFullNameAndDeletedAtIsNull(fullName: String, pageable: Pageable): Page<User>
 
     @Query(
         value = """
             FROM        User u 
             WHERE       u.cpf = ?1
-                        AND (LOWER(u.name) LIKE ('%' || LOWER(?2) || '%'))
+                        AND (LOWER(u.fullName) LIKE ('%' || LOWER(?2) || '%'))
                         AND u.deletedAt IS NULL
         """,
         countQuery = """
             SELECT      COUNT(u.id) 
             FROM        User u 
             WHERE       u.cpf = ?1
-                        AND (LOWER(u.name) LIKE ('%' || LOWER(?2) || '%'))
+                        AND (LOWER(u.fullName) LIKE ('%' || LOWER(?2) || '%'))
                         AND u.deletedAt IS NULL
         """
     )
-    fun findAllByCpfAndNameAndDeletedAtIsNull(cpf: String, name: String, pageable: Pageable): Page<User>
+    fun findAllByCpfAndFullNameAndDeletedAtIsNull(cpf: String, fullName: String, pageable: Pageable): Page<User>
 
 }

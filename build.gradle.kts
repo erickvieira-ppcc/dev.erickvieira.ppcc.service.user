@@ -1,16 +1,16 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-import org.jetbrains.kotlin.gradle.tasks.KotlinTest
 
 plugins {
     id("org.springframework.boot")
     id("io.spring.dependency-management")
     id("org.openapi.generator")
+    id("info.solidsoft.pitest")
     kotlin("jvm") version "1.6.0"
     kotlin("plugin.spring") version "1.6.0"
 }
 
 group = "dev.erickvieira.ppcc.service"
-java.sourceCompatibility = JavaVersion.VERSION_11
+java.sourceCompatibility = JavaVersion.VERSION_1_8
 
 configurations {
     compileOnly {
@@ -39,13 +39,14 @@ dependencies {
     val flywaydbVersion = "6.4.4"
     val hibernateValidatorVersion = "7.0.2.Final"
     val javaxValidationVersion = "2.0.1.Final"
-    val junitVersion = "4.12"
+    val junitVersion = "4.13.1"
     val restAssuredVersion = "3.3.0"
     val dbRiderVersion = "1.19.0"
     val dbRiderSpringVersion = "1.23.1"
     val approvaltestsVersion = "11.5.0"
     val assertkVersion = "0.24"
     val gsonVersion = "2.8.5"
+    val descartesVersion = "1.3.1"
 
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVersion")
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-hibernate5:$jacksonVersion")
@@ -90,6 +91,8 @@ dependencies {
     testImplementation("com.github.database-rider:rider-spring:$dbRiderSpringVersion")
     testImplementation("com.approvaltests:approvaltests:$approvaltestsVersion")
     testImplementation("com.willowtreeapps.assertk:assertk-jvm:$assertkVersion")
+
+    pitest("eu.stamp-project:descartes:$descartesVersion")
 }
 
 dependencyManagement {
@@ -98,27 +101,45 @@ dependencyManagement {
     }
 }
 
-tasks.withType<KotlinCompile> {
-    dependsOn(":openApiGenerate")
-    kotlinOptions {
-        freeCompilerArgs = listOf("-Xjsr305=strict")
-        jvmTarget = "11"
-    }
+val compileKotlin: KotlinCompile by tasks
+compileKotlin.dependsOn(":openApiGenerate")
+compileKotlin.kotlinOptions {
+    freeCompilerArgs = listOf("-Xjsr305=strict")
+    jvmTarget = "${property("jvm")}"
 }
 
-tasks.withType<KotlinTest> {
-    dependsOn(":openApiGenerate")
+val compileTestKotlin: KotlinCompile by tasks
+compileTestKotlin.dependsOn(":openApiGenerate")
+compileTestKotlin.kotlinOptions {
+    jvmTarget = "${property("jvm")}"
 }
 
 tasks.withType<Test> {
     dependsOn(":openApiGenerate")
     useJUnitPlatform()
-    ignoreFailures = false
+    systemProperty("spring.test.constructor.autowire.mode", "all")
 }
 
 sourceSets {
     getByName("test").java.srcDirs("src/test")
-    getByName("main").java.srcDirs("build/generated/src/main/java")
+    getByName("main").java.srcDirs("build/generated/src/main/kotlin")
+}
+
+pitest {
+    targetClasses.set(
+        arrayListOf(
+            "dev.erickvieira.ppcc.service.user.domain.service.*",
+            "dev.erickvieira.ppcc.service.user.domain.extension.*",
+            "dev.erickvieira.ppcc.service.user.unit.*"
+        )
+    )
+    testSourceSets.set(arrayListOf(sourceSets.test.get()))
+    mainSourceSets.set(arrayListOf(sourceSets.main.get()))
+    junit5PluginVersion.set("0.12")
+    mutationEngine.set("descartes")
+    useClasspathFile.set(true)
+    outputFormats.set(arrayListOf("HTML"))
+    pitestVersion.set("1.6.7")
 }
 
 openApiGenerate {

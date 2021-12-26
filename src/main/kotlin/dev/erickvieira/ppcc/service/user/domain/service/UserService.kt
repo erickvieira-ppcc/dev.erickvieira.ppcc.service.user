@@ -1,13 +1,13 @@
 package dev.erickvieira.ppcc.service.user.domain.service
 
+import dev.erickvieira.ppcc.service.user.domain.entity.User
 import dev.erickvieira.ppcc.service.user.domain.exception.*
 import dev.erickvieira.ppcc.service.user.domain.extension.*
 import dev.erickvieira.ppcc.service.user.domain.repository.UserRepository
-import dev.erickvieira.ppcc.service.user.extension.PageRequest
-import dev.erickvieira.ppcc.service.user.extension.custom
-import dev.erickvieira.ppcc.service.user.extension.executeOrLog
+import dev.erickvieira.ppcc.service.user.extension.*
 import dev.erickvieira.ppcc.service.user.web.api.UserApiDelegate
 import dev.erickvieira.ppcc.service.user.web.api.model.*
+import io.swagger.annotations.Api
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.http.ResponseEntity
@@ -16,6 +16,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder
 import java.util.*
 
 @Service
+@Api(value = "User", description = "the User API", tags = ["User"])
 class UserService(
     private val userRepository: UserRepository
 ) : UserApiDelegate {
@@ -27,17 +28,17 @@ class UserService(
         UnexpectedException::class
     )
     override fun searchUsers(
-        name: String?,
+        fullName: String?,
         cpf: String?,
-        page: Int?,
-        size: Int?,
-        sort: String?,
-        direction: Direction?
+        page: Int,
+        size: Int,
+        sort: UserFields,
+        direction: Direction
     ): ResponseEntity<PageUserDTO> = logger.executeOrLog {
         val method = "method" to "searchUsers"
         val search = arrayOf(
             "cpf" to cpf,
-            "name" to name,
+            "fullName" to fullName,
             "page" to page,
             "size" to size,
             "sort" to sort,
@@ -46,44 +47,46 @@ class UserService(
         val pageable = PageRequest(pagination = search.toMap())
         logger.custom.info(method, *search)
 
-        val pagedResult = if (cpf == null && name == null) {
+        val pagedResult = if (cpf == null && fullName == null) {
             userRepository.findAllByDeletedAtIsNull(pageable = pageable)
-        } else if (cpf != null && name != null) {
-            userRepository.findAllByCpfAndNameAndDeletedAtIsNull(cpf = cpf, name = name, pageable = pageable)
+        } else if (cpf != null && fullName != null) {
+            userRepository.findAllByCpfAndFullNameAndDeletedAtIsNull(
+                cpf = cpf,
+                fullName = fullName,
+                pageable = pageable
+            )
         } else if (cpf != null) {
             userRepository.findAllByCpfAndDeletedAtIsNull(cpf = cpf, pageable = pageable)
-        } else userRepository.findAllByNameAndDeletedAtIsNull(name = name!!, pageable = pageable)
+        } else userRepository.findAllByFullNameAndDeletedAtIsNull(fullName = fullName!!, pageable = pageable)
 
         logger.custom.info(method, "totalElements" to pagedResult.totalElements, "totalPages" to pagedResult.totalPages)
 
         if (pagedResult.isEmpty) throw UserNotFoundException(search = search)
 
-        ResponseEntity.ok(pagedResult.toPageUserDTO())
+        ResponseEntity.ok(load { fromPage(page = pagedResult) })
     }
 
     @Throws(
         DuplicatedCpfException::class,
+        NullPayloadException::class,
         UnexpectedException::class
     )
     override fun createUser(userCreationDTO: UserCreationDTO?): ResponseEntity<UserDTO> = logger.executeOrLog {
         val method = "method" to "createUser"
-        userCreationDTO?.apply {
-            logger.custom.info(
-                method,
-                "cpf" to cpf,
-                "name" to name,
-                "birthDate" to birthDate
-            )
+        userCreationDTO.ensurePayloadNotNull { payload ->
+            logger.custom.info(method, *payload.toPairArray())
+            User.fromUserCreationDTO(input = payload).ensureCpfUniquenessForTheGivenUser { user ->
+                userRepository.save(user).let { savedUser ->
+                    ResponseEntity.created(
+                        ServletUriComponentsBuilder
+                            .fromCurrentRequestUri()
+                            .path("/${savedUser.id}")
+                            .build()
+                            .toUri()
+                    ).body(savedUser.toUserDTO())
+                }
+            }
         }
-        val user = userCreationDTO?.toUser() ?: throw InvalidPayloadException(payload = userCreationDTO)
-        user.takeIf {
-            userRepository.findFirstByCpf(it.cpf) == null
-        }?.let {
-            userRepository.save(it)
-            ResponseEntity.created(
-                ServletUriComponentsBuilder.fromCurrentRequestUri().path("/${it.id}").build().toUri()
-            ).body(it.toUserDTO())
-        } ?: throw DuplicatedCpfException(cpf = user.cpf)
     }
 
     @Throws(
@@ -100,13 +103,11 @@ class UserService(
 
     @Throws(
         UserNotFoundException::class,
-        InvalidCpfException::class,
         UnexpectedException::class
     )
-    override fun retrieveUserByCpf(userCpf: String?) = logger.executeOrLog {
+    override fun retrieveUserByCpf(userCpf: String): ResponseEntity<UserDTO> = logger.executeOrLog {
         val method = "method" to "retrieveUserByCpf"
         logger.custom.info(method, "cpfUser" to userCpf)
-        if (userCpf == null) throw InvalidCpfException(cpf = userCpf)
         userRepository.findFirstByCpfAndDeletedAtIsNull(userCpf)?.let {
             ResponseEntity.ok(it.toUserDTO())
         } ?: throw UserNotFoundException("cpf" to userCpf)
@@ -114,7 +115,7 @@ class UserService(
 
     @Throws(
         UserNotFoundException::class,
-        InvalidPayloadException::class,
+        NullPayloadException::class,
         UnexpectedException::class
     )
     override fun partiallyUpdateUser(
@@ -122,30 +123,20 @@ class UserService(
         userPartialUpdateDTO: UserPartialUpdateDTO?
     ): ResponseEntity<UserDTO> = logger.executeOrLog {
         val method = "method" to "partiallyUpdateUser"
-        userPartialUpdateDTO?.apply {
-            logger.custom.info(
-                method,
-                "name" to name,
-                "birthDate" to birthDate,
-                "phone" to phone,
-                "email" to email
-            )
-        }
-        logger.custom.info(method, "userId" to userId)
-        val user = userRepository.findFirstByIdAndDeletedAtIsNull(userId)
-            ?: throw UserNotFoundException("id" to userId)
-        userRepository.save(
-            user.withUpdatedValues(
-                values = userPartialUpdateDTO ?: throw InvalidPayloadException(payload = userPartialUpdateDTO)
-            )
-        ).let {
-            ResponseEntity.ok(it.toUserDTO())
+        userPartialUpdateDTO.ensurePayloadNotNull { payload ->
+            logger.custom.info(method, "userId" to userId)
+            logger.custom.info(method, *payload.toPairArray())
+            userRepository.findFirstByIdAndDeletedAtIsNull(id = userId)?.let { user ->
+                userRepository
+                    .save(user.withUpdatedValues(values = payload))
+                    .let { ResponseEntity.ok(it.toUserDTO()) }
+            } ?: throw UserNotFoundException("id" to userId)
         }
     }
 
     @Throws(
         UserNotFoundException::class,
-        InvalidPayloadException::class,
+        NullPayloadException::class,
         UnexpectedException::class
     )
     override fun updateUser(
@@ -153,24 +144,14 @@ class UserService(
         userUpdateDTO: UserUpdateDTO?
     ): ResponseEntity<UserDTO> = logger.executeOrLog {
         val method = "method" to "updateUser"
-        userUpdateDTO?.apply {
-            logger.custom.info(
-                method,
-                "name" to name,
-                "birthDate" to birthDate,
-                "phone" to phone,
-                "email" to email
-            )
-        }
-        logger.custom.info(method, "userId" to userId)
-        val user = userRepository.findFirstByIdAndDeletedAtIsNull(userId)
-            ?: throw UserNotFoundException("id" to userId)
-        userRepository.save(
-            user.withUpdatedValues(
-                values = userUpdateDTO ?: throw InvalidPayloadException(payload = userUpdateDTO)
-            )
-        ).let {
-            ResponseEntity.ok(it.toUserDTO())
+        userUpdateDTO.ensurePayloadNotNull { payload ->
+            logger.custom.info(method, "userId" to userId)
+            logger.custom.info(method, *payload.toPairArray())
+            userRepository.findFirstByIdAndDeletedAtIsNull(id = userId)?.let { user ->
+                userRepository
+                    .save(user.withUpdatedValues(values = payload))
+                    .let { ResponseEntity.ok(it.toUserDTO()) }
+            } ?: throw UserNotFoundException("id" to userId)
         }
     }
 
@@ -186,5 +167,24 @@ class UserService(
             ResponseEntity.ok(it.toUserDTO())
         } ?: throw UserNotFoundException("id" to userId)
     }
+
+    @Throws(
+        NullPayloadException::class
+    )
+    private fun <T : Any, S : Any> T?.ensurePayloadNotNull(
+        payload: String = User::class.java.name,
+        callback: (it: T) -> S
+    ) = this?.let {
+        callback(it)
+    } ?: throw NullPayloadException(payload = payload)
+
+    @Throws(
+        DuplicatedCpfException::class,
+        UnexpectedException::class
+    )
+    private fun <T : Any> User.ensureCpfUniquenessForTheGivenUser(callback: ((it: User) -> T)): T =
+        this.takeIf { userRepository.findFirstByCpf(cpf = cpf) == null }
+            ?.let { callback(it) }
+            ?: throw DuplicatedCpfException(cpf = cpf)
 
 }

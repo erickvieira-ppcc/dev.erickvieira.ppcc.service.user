@@ -3,7 +3,7 @@ package dev.erickvieira.ppcc.service.user.domain.service
 import dev.erickvieira.ppcc.service.user.domain.entity.User
 import dev.erickvieira.ppcc.service.user.domain.exception.*
 import dev.erickvieira.ppcc.service.user.domain.extension.*
-import dev.erickvieira.ppcc.service.user.domain.port.rabbitmq.UserRabbitDispatcherPort
+import dev.erickvieira.ppcc.service.user.domain.port.rabbitmq.dispatcher.UserRabbitDispatcherPort
 import dev.erickvieira.ppcc.service.user.domain.repository.UserRepository
 import dev.erickvieira.ppcc.service.user.extension.*
 import dev.erickvieira.ppcc.service.user.web.api.UserApiDelegate

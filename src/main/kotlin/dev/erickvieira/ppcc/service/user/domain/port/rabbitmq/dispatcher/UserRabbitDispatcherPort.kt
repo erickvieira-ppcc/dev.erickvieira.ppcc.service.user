@@ -1,4 +1,4 @@
-package dev.erickvieira.ppcc.service.user.domain.port.rabbitmq
+package dev.erickvieira.ppcc.service.user.domain.port.rabbitmq.dispatcher
 
 import java.util.*
 

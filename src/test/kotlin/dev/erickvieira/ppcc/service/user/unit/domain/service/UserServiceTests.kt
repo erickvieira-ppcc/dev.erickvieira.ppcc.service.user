@@ -7,7 +7,7 @@ import dev.erickvieira.ppcc.service.user.domain.exception.NullPayloadException
 import dev.erickvieira.ppcc.service.user.domain.exception.UserNotFoundException
 import dev.erickvieira.ppcc.service.user.domain.extension.asDeleted
 import dev.erickvieira.ppcc.service.user.domain.extension.withUpdatedValues
-import dev.erickvieira.ppcc.service.user.domain.port.rabbitmq.UserRabbitDispatcherPort
+import dev.erickvieira.ppcc.service.user.domain.port.rabbitmq.dispatcher.UserRabbitDispatcherPort
 import dev.erickvieira.ppcc.service.user.domain.repository.UserRepository
 import dev.erickvieira.ppcc.service.user.domain.service.UserService
 import dev.erickvieira.ppcc.service.user.web.api.model.Direction

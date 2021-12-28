@@ -3,6 +3,7 @@ package dev.erickvieira.ppcc.service.user.domain.service
 import dev.erickvieira.ppcc.service.user.domain.entity.User
 import dev.erickvieira.ppcc.service.user.domain.exception.*
 import dev.erickvieira.ppcc.service.user.domain.extension.*
+import dev.erickvieira.ppcc.service.user.domain.port.rabbitmq.UserRabbitDispatcherPort
 import dev.erickvieira.ppcc.service.user.domain.repository.UserRepository
 import dev.erickvieira.ppcc.service.user.extension.*
 import dev.erickvieira.ppcc.service.user.web.api.UserApiDelegate
@@ -18,7 +19,8 @@ import java.util.*
 @Service
 @Api(value = "User", description = "the User API", tags = ["User"])
 class UserService(
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val userDispatcher: UserRabbitDispatcherPort
 ) : UserApiDelegate {
 
     private var logger: Logger = LoggerFactory.getLogger(UserService::class.java)
@@ -77,6 +79,7 @@ class UserService(
             logger.custom.info(method, *payload.toPairArray())
             User.fromUserCreationDTO(input = payload).ensureCpfUniquenessForTheGivenUser { user ->
                 userRepository.save(user).let { savedUser ->
+                    userDispatcher.dispatch(userId = savedUser.id!!)
                     ResponseEntity.created(
                         ServletUriComponentsBuilder
                             .fromCurrentRequestUri()

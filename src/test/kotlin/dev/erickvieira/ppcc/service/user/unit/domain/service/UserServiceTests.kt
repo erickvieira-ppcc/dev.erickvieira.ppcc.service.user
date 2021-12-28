@@ -7,6 +7,7 @@ import dev.erickvieira.ppcc.service.user.domain.exception.NullPayloadException
 import dev.erickvieira.ppcc.service.user.domain.exception.UserNotFoundException
 import dev.erickvieira.ppcc.service.user.domain.extension.asDeleted
 import dev.erickvieira.ppcc.service.user.domain.extension.withUpdatedValues
+import dev.erickvieira.ppcc.service.user.domain.port.rabbitmq.UserRabbitDispatcherPort
 import dev.erickvieira.ppcc.service.user.domain.repository.UserRepository
 import dev.erickvieira.ppcc.service.user.domain.service.UserService
 import dev.erickvieira.ppcc.service.user.web.api.model.Direction
@@ -29,7 +30,11 @@ import java.util.*
 class UserServiceTests : UserUnitTests() {
 
     private val userRepositoryMock: UserRepository = mockk()
-    private val userServiceMock = UserService(userRepository = userRepositoryMock)
+    private val userDispatcherMock: UserRabbitDispatcherPort = mockk()
+    private val userServiceMock = UserService(
+        userRepository = userRepositoryMock,
+        userDispatcher = userDispatcherMock
+    )
 
     @Before
     fun setUp() = MockKAnnotations.init(this)
@@ -138,6 +143,7 @@ class UserServiceTests : UserUnitTests() {
         RequestContextHolder.setRequestAttributes(ServletRequestAttributes(MockHttpServletRequest()))
 
         every { userRepositoryMock.findFirstByCpf(cpf = any()) } returns null
+        every { userDispatcherMock.dispatch(any()) } returns Unit
         every { userRepositoryMock.save(any()) } returns userMock
 
         userServiceMock.createUser(userCreationDTOMock).let { responseEntity ->
@@ -146,6 +152,7 @@ class UserServiceTests : UserUnitTests() {
         }
 
         verify(exactly = 1) { userRepositoryMock.findFirstByCpf(any()) }
+        verify(exactly = 1) { userDispatcherMock.dispatch(any()) }
         verify(exactly = 1) { userRepositoryMock.save(any()) }
     }
 
@@ -155,11 +162,13 @@ class UserServiceTests : UserUnitTests() {
         val userMock = userCreationDTOMock.asSavedUser()
 
         every { userRepositoryMock.findFirstByCpf(cpf = any()) } returns userMock
+        every { userDispatcherMock.dispatch(any()) } returns Unit
         every { userRepositoryMock.save(any()) } returns mockk()
 
         assertThrows<DuplicatedCpfException> { userServiceMock.createUser(userCreationDTOMock) }
 
         verify(exactly = 1) { userRepositoryMock.findFirstByCpf(any()) }
+        verify(exactly = 0) { userDispatcherMock.dispatch(any()) }
         verify(exactly = 0) { userRepositoryMock.save(any()) }
     }
 

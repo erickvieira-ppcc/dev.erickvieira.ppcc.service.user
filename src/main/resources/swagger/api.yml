@@ -261,8 +261,8 @@ components:
           example: "7435806f-4022-41d0-9c62-c9fc74d97d16"
         cpf:
           type: string
-          minLength: 11
-          maxLength: 11
+          minLength: 10
+          maxLength: 10
           example: "99988877766"
         fullName:
           type: string
@@ -303,8 +303,8 @@ components:
       properties:
         cpf:
           type: string
-          minLength: 11
-          maxLength: 11
+          minLength: 10
+          maxLength: 10
           example: "99988877766"
         fullName:
           type: string
